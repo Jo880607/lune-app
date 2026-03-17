@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0D0D1A;
+  --bg2: #1A1A2E;
+  --bg3: #16213E;
+  --accent: #C8A8E9;
+  --accent2: #9B72CF;
+  --yellow: #FFE566;
+  --text: #E8E8F0;
+  --muted: #6B6B8A;
+}
+
+body {
+  color: var(--text);
+  background: var(--bg);
+  font-family: 'DotGothic16', monospace;
+}
+
+/* 픽셀 버튼 */
+.pixel-btn {
+  font-family: 'DotGothic16', monospace;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  padding: 12px 28px;
+  box-shadow: 4px 4px 0 var(--accent2);
+  transition: all 0.1s;
+  cursor: pointer;
+}
+
+.pixel-btn:hover {
+  background: var(--accent2);
+  color: var(--text);
+}
+
+.pixel-btn:active {
+  box-shadow: none;
+  transform: translate(4px, 4px);
+}
+
+.pixel-btn-secondary {
+  font-family: 'DotGothic16', monospace;
+  background: transparent;
+  color: var(--muted);
+  border: 2px solid var(--bg3);
+  padding: 10px 24px;
+  transition: all 0.1s;
+  cursor: pointer;
+}
+
+.pixel-btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 별 깜빡임 애니메이션 */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes twinkle-delayed {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.star {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+.star-delayed {
+  animation: twinkle-delayed 2s ease-in-out infinite;
+}
+
+.float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* 픽셀 타이틀 폰트 */
+.pixel-title {
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* 픽셀 태그 */
+.pixel-tag {
+  font-family: 'DotGothic16', monospace;
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--bg3);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 12px;
+}
+
+.pixel-tag.yellow {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+/* 커서 깜빡임 */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
