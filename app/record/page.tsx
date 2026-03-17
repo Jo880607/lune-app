@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { onAuthStateChanged, User } from "firebase/auth";
@@ -386,6 +386,9 @@ export default function RecordPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [todayRecord, setTodayRecord] = useState<Record | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -462,7 +465,67 @@ export default function RecordPage() {
     }
   };
 
-  const canSubmit = mode === "voice" ? isRecording === false && mode !== null : text.trim().length > 0;
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      // 녹음 중지
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      // 녹음 시작
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          // 스트림 트랙 정리
+          stream.getTracks().forEach((track) => track.stop());
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+
+          if (audioBlob.size === 0) return;
+
+          // Whisper API 호출
+          setTranscribing(true);
+          try {
+            const formData = new FormData();
+            formData.append("audio", audioBlob, "recording.webm");
+
+            const response = await fetch("/api/transcribe", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.text) {
+              setText(data.text);
+            } else {
+              alert(data.error || "음성 변환에 실패했어요.");
+            }
+          } catch {
+            alert("음성 변환 중 오류가 발생했어요.");
+          } finally {
+            setTranscribing(false);
+          }
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      } catch {
+        alert("마이크 접근이 허용되지 않았어요.");
+      }
+    }
+  };
+
+  const canSubmit = text.trim().length > 0 && !isRecording && !transcribing;
 
   if (loading) {
     return (
@@ -552,23 +615,50 @@ export default function RecordPage() {
         {mode === "voice" && (
           <div className="flex flex-col items-center gap-6 py-8">
             <button
-              onClick={() => setIsRecording(!isRecording)}
+              onClick={handleVoiceToggle}
+              disabled={transcribing}
               className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${
                 isRecording
                   ? "bg-red-500 animate-pulse"
+                  : transcribing
+                  ? "bg-[var(--bg3)] opacity-50 cursor-not-allowed"
                   : "bg-[var(--bg3)] hover:bg-[var(--accent2)]"
               }`}
             >
               <PixelMicLarge isRecording={isRecording} />
             </button>
             <p className="text-[var(--muted)] text-sm">
-              {isRecording ? "녹음 중... 다시 누르면 멈춰요" : "버튼을 눌러 녹음 시작"}
+              {transcribing
+                ? "음성을 텍스트로 변환 중..."
+                : isRecording
+                ? "녹음 중... 다시 누르면 멈춰요"
+                : text
+                ? "변환 완료! 아래에서 확인하세요"
+                : "버튼을 눌러 녹음 시작"}
             </p>
+            {/* 변환된 텍스트 또는 안내 */}
             {!isRecording && (
-              <div className="w-full max-w-sm bg-[var(--bg2)] rounded-lg p-4 border border-[var(--bg3)]">
-                <p className="text-[var(--muted)] text-xs text-center">
-                  녹음된 음성이 여기에 표시됩니다
-                </p>
+              <div className="w-full max-w-sm">
+                {transcribing ? (
+                  <div className="bg-[var(--bg2)] rounded-lg p-4 border border-[var(--bg3)] flex items-center justify-center gap-2">
+                    <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 bg-[var(--accent)] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                ) : text ? (
+                  <textarea
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    className="w-full h-32 p-4 bg-[var(--bg2)] border-2 border-[var(--bg3)] rounded-lg text-[var(--text)] placeholder-[var(--muted)] resize-none focus:outline-none focus:border-[var(--accent)] transition-colors"
+                    style={{ fontFamily: "'DotGothic16', monospace" }}
+                  />
+                ) : (
+                  <div className="bg-[var(--bg2)] rounded-lg p-4 border border-[var(--bg3)]">
+                    <p className="text-[var(--muted)] text-xs text-center">
+                      녹음된 음성이 여기에 표시됩니다
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
