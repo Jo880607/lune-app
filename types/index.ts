@@ -51,3 +51,17 @@ export interface Message {
   content: string;
   createdAt: Timestamp;
 }
+
+export interface WaitlistEntry {
+  phone: string;
+  position: number;
+  surveyDone: boolean;
+  surveyAnswers: {
+    q1: string;
+    q2: string;
+    q3: string;
+    q4: string;
+  } | null;
+  lastVisitDate: string | null;
+  createdAt: Timestamp;
+}

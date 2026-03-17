@@ -11,9 +11,12 @@ import {
   orderBy,
   limit,
   Timestamp,
+  getCountFromServer,
+  onSnapshot,
+  increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Record, User, WeeklyAnalysis, Connection, Message } from "@/types";
+import { Record, User, WeeklyAnalysis, Connection, Message, WaitlistEntry } from "@/types";
 
 // 기록 저장
 export async function saveRecord(
@@ -149,6 +152,17 @@ export async function saveUser(
   };
 
   await setDoc(doc(db, "users", uid), userData);
+
+  // 유저 수 카운터 업데이트
+  try {
+    await setDoc(
+      doc(db, "stats", "global"),
+      { userCount: increment(1) },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("[Firestore] stats userCount 업데이트 실패:", error);
+  }
 }
 
 // 유저 정보 불러오기
@@ -509,4 +523,163 @@ export async function checkMessageCount(
     (!lastSentAt || lastSentAt.getTime() < oneHourAgo.getTime());
 
   return { count, canSend, lastSentAt };
+}
+
+// ===== 대기자 명단 (Waitlist) 관련 함수 =====
+
+// 대기자 통계 조회
+export async function getWaitlistStats(): Promise<{
+  userCount: number;
+  waitlistCount: number;
+}> {
+  let userCount = 0;
+  let waitlistCount = 0;
+
+  try {
+    const statsDoc = await getDoc(doc(db, "stats", "global"));
+    if (statsDoc.exists()) {
+      userCount = statsDoc.data().userCount || 0;
+    }
+  } catch (error) {
+    console.error("[Firestore] getWaitlistStats userCount 실패:", error);
+  }
+
+  try {
+    const snapshot = await getCountFromServer(collection(db, "waitlist"));
+    waitlistCount = snapshot.data().count;
+  } catch (error) {
+    console.error("[Firestore] getWaitlistStats waitlistCount 실패:", error);
+  }
+
+  return { userCount, waitlistCount };
+}
+
+// 대기 신청
+export async function joinWaitlist(
+  phone: string
+): Promise<{ position: number; isExisting: boolean }> {
+  const normalizedPhone = phone.replace(/[^0-9]/g, "");
+  console.log("[Firestore] joinWaitlist 시작:", normalizedPhone);
+
+  // 이미 신청했는지 확인
+  const existingDoc = await getDoc(doc(db, "waitlist", normalizedPhone));
+  if (existingDoc.exists()) {
+    const data = existingDoc.data();
+    console.log("[Firestore] joinWaitlist 이미 등록됨:", data.position);
+    return { position: data.position, isExisting: true };
+  }
+
+  // 현재 대기자 수로 순번 결정
+  const snapshot = await getCountFromServer(collection(db, "waitlist"));
+  const position = snapshot.data().count + 1;
+
+  await setDoc(doc(db, "waitlist", normalizedPhone), {
+    phone: normalizedPhone,
+    position,
+    surveyDone: false,
+    surveyAnswers: null,
+    lastVisitDate: null,
+    createdAt: Timestamp.now(),
+  });
+
+  console.log("[Firestore] joinWaitlist 성공:", { position });
+  return { position, isExisting: false };
+}
+
+// 내 순번 조회
+export async function getWaitlistInfo(
+  phone: string
+): Promise<WaitlistEntry | null> {
+  const normalizedPhone = phone.replace(/[^0-9]/g, "");
+  const snapshot = await getDoc(doc(db, "waitlist", normalizedPhone));
+
+  if (!snapshot.exists()) return null;
+  return snapshot.data() as WaitlistEntry;
+}
+
+// 매일 방문 (1칸 앞당김, 하루 1회)
+export async function dailyVisit(
+  phone: string
+): Promise<{ success: boolean; newPosition: number; message: string }> {
+  const normalizedPhone = phone.replace(/[^0-9]/g, "");
+  const docRef = doc(db, "waitlist", normalizedPhone);
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) {
+    return { success: false, newPosition: 0, message: "등록된 정보가 없어요" };
+  }
+
+  const data = snapshot.data();
+  const today = new Date().toISOString().split("T")[0];
+
+  if (data.lastVisitDate === today) {
+    return {
+      success: false,
+      newPosition: data.position,
+      message: "오늘은 이미 방문했어요",
+    };
+  }
+
+  const newPosition = Math.max(1, data.position - 1);
+  await updateDoc(docRef, {
+    position: newPosition,
+    lastVisitDate: today,
+  });
+
+  return {
+    success: true,
+    newPosition,
+    message: "오늘 방문 완료! 1칸 앞당겨졌어요",
+  };
+}
+
+// 질문 답변 + 15칸 앞당김 (1회만)
+export async function submitSurvey(
+  phone: string,
+  answers: { q1: string; q2: string; q3: string; q4: string }
+): Promise<{ success: boolean; newPosition: number; message: string }> {
+  const normalizedPhone = phone.replace(/[^0-9]/g, "");
+  const docRef = doc(db, "waitlist", normalizedPhone);
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) {
+    return { success: false, newPosition: 0, message: "등록된 정보가 없어요" };
+  }
+
+  const data = snapshot.data();
+  if (data.surveyDone) {
+    return {
+      success: false,
+      newPosition: data.position,
+      message: "이미 질문에 답변했어요",
+    };
+  }
+
+  const newPosition = Math.max(1, data.position - 15);
+  await updateDoc(docRef, {
+    surveyAnswers: answers,
+    surveyDone: true,
+    position: newPosition,
+  });
+
+  return {
+    success: true,
+    newPosition,
+    message: "답변 완료! 15칸 앞당겨졌어요",
+  };
+}
+
+// 실시간 순번 구독 (onSnapshot)
+export function subscribeToWaitlistPosition(
+  phone: string,
+  callback: (data: WaitlistEntry | null) => void
+): () => void {
+  const normalizedPhone = phone.replace(/[^0-9]/g, "");
+  return onSnapshot(doc(db, "waitlist", normalizedPhone), (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data() as WaitlistEntry);
+    } else {
+      callback(null);
+    }
+  });
 }

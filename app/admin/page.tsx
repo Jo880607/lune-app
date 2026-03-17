@@ -7,8 +7,6 @@ import { auth, db } from "@/lib/firebase";
 import {
   collection,
   getDocs,
-  query,
-  where,
   Timestamp,
 } from "firebase/firestore";
 

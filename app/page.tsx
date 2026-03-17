@@ -99,7 +99,10 @@ export default function Home() {
           >
             시작하기
           </button>
-          <button className="pixel-btn-secondary w-full">
+          <button
+            className="pixel-btn-secondary w-full"
+            onClick={() => router.push("/waitlist")}
+          >
             대기자 명단 보기
           </button>
         </div>
