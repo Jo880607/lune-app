@@ -187,7 +187,7 @@ export default function ChatPage() {
     const check = () => {
       const now = Date.now();
       const elapsed = now - lastSentAt.getTime();
-      const remaining = 2 * 60 * 60 * 1000 - elapsed;
+      const remaining = 1 * 60 * 60 * 1000 - elapsed;
 
       if (remaining <= 0) {
         setCanSend(true);

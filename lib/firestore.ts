@@ -502,11 +502,11 @@ export async function checkMessageCount(
     }
   }
 
-  // 2시간 간격 체크
-  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  // 1시간 간격 체크
+  const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000);
   const canSend =
     count < 2 &&
-    (!lastSentAt || lastSentAt.getTime() < twoHoursAgo.getTime());
+    (!lastSentAt || lastSentAt.getTime() < oneHourAgo.getTime());
 
   return { count, canSend, lastSentAt };
 }
