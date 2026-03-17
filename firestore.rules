@@ -14,25 +14,28 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
 
-    // analyses: 본인만 읽기/쓰기
+    // analyses: 인증된 유저는 읽기 가능, 본인만 쓰기
     match /analyses/{analysisId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == request.resource.data.userId;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
 
-    // connections: 연결된 두 유저만 읽기, 생성은 인증된 유저
+    // connections: 인증된 유저는 읽기/생성/수정 가능
     match /connections/{connectionId} {
-      allow read: if request.auth != null &&
-        (request.auth.uid == resource.data.user1Id || request.auth.uid == resource.data.user2Id);
+      allow read: if request.auth != null;
       allow create: if request.auth != null;
-    }
+      allow update: if request.auth != null;
 
-    // messages: 연결된 두 유저만 읽기/쓰기
-    match /messages/{messageId} {
-      allow read, write: if request.auth != null &&
-        (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
-      allow create: if request.auth != null &&
-        request.auth.uid == request.resource.data.senderId;
+      // messages: 연결 참여자만 읽기/쓰기 (subcollection)
+      match /messages/{messageId} {
+        allow read: if request.auth != null &&
+          (request.auth.uid == get(/databases/$(database)/documents/connections/$(connectionId)).data.user1Id ||
+           request.auth.uid == get(/databases/$(database)/documents/connections/$(connectionId)).data.user2Id);
+        allow create: if request.auth != null &&
+          (request.auth.uid == get(/databases/$(database)/documents/connections/$(connectionId)).data.user1Id ||
+           request.auth.uid == get(/databases/$(database)/documents/connections/$(connectionId)).data.user2Id);
+      }
     }
 
     // waitlist: 전화번호 기반 공개 접근 (비인증 유저용)

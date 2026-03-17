@@ -14,6 +14,8 @@ import {
   getCountFromServer,
   onSnapshot,
   increment,
+  QueryDocumentSnapshot,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { Record, User, WeeklyAnalysis, Connection, Message, WaitlistEntry } from "@/types";
@@ -331,66 +333,112 @@ export async function findMatch(
 
   const today = new Date().toISOString().split("T")[0];
 
-  // 대기 중인 연결 찾기
-  try {
+  type WaitingDoc = QueryDocumentSnapshot<DocumentData>;
+
+  // 대기 중인 연결 검색 함수
+  const searchWaiting = async (): Promise<WaitingDoc[]> => {
     const q = query(
       collection(db, "connections"),
       where("status", "==", "waiting"),
+      where("date", "==", today),
       limit(50)
     );
     const snapshot = await getDocs(q);
-
-    // 오늘 날짜 + 자기 자신 제외 필터링
-    const candidates = snapshot.docs.filter((d) => {
+    // 자기 자신 제외 + AI 연결 제외
+    return snapshot.docs.filter((d) => {
       const data = d.data();
-      return data.date === today && data.user1Id !== userId;
+      return data.user1Id !== userId && data.type !== "ai";
     });
+  };
 
-    if (candidates.length > 0) {
-      let bestMatch = candidates[0];
-
-      if (type === "human" && emotionTags.length > 0) {
-        // 감정 태그 유사도 기반 정렬
-        const scored = candidates.map((d) => {
-          const data = d.data();
-          const overlap = emotionTags.filter(
-            (t) => data.emotionTags?.includes(t)
-          ).length;
-          return { doc: d, score: overlap };
-        });
-        scored.sort((a, b) => b.score - a.score);
-        bestMatch = scored[0].doc;
-      } else {
-        // 랜덤 선택
-        bestMatch = candidates[Math.floor(Math.random() * candidates.length)];
-      }
-
-      // 매칭 성공
-      const currentUser = await getUser(userId);
-      const nickname = currentUser?.nickname || "익명";
-      await updateDoc(doc(db, "connections", bestMatch.id), {
-        user2Id: userId,
-        user2Nickname: nickname,
-        status: "matched",
+  // 후보 중 최적 매칭 선택 함수
+  const pickBest = (candidates: WaitingDoc[]): WaitingDoc => {
+    if (emotionTags.length > 0) {
+      const scored = candidates.map((d) => {
+        const data = d.data();
+        const overlap = emotionTags.filter(
+          (t) => data.emotionTags?.includes(t)
+        ).length;
+        return { doc: d, score: overlap };
       });
-      console.log("[Firestore] findMatch 매칭 성공:", bestMatch.id);
-      return { connectionId: bestMatch.id, status: "matched" };
+      scored.sort((a, b) => b.score - a.score);
+      return scored[0].doc;
     }
-  } catch (error) {
-    console.error("[Firestore] findMatch 검색 에러:", error);
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  };
+
+  // 매칭 실행 함수
+  const tryMatch = async (bestMatch: WaitingDoc) => {
+    const currentUser = await getUser(userId);
+    const nickname = currentUser?.nickname || "익명";
+    await updateDoc(doc(db, "connections", bestMatch.id), {
+      user2Id: userId,
+      user2Nickname: nickname,
+      status: "matched",
+    });
+    console.log("[Firestore] findMatch 매칭 성공:", bestMatch.id);
+    return { connectionId: bestMatch.id, status: "matched" as const };
+  };
+
+  // 1차 검색: 대기 중인 연결 찾기
+  const candidates = await searchWaiting();
+  console.log("[findMatch] 1차 검색 결과:", {
+    후보수: candidates.length,
+    후보목록: candidates.map((d) => ({ id: d.id, user1: d.data().user1Id, type: d.data().type })),
+  });
+
+  if (candidates.length > 0) {
+    const best = pickBest(candidates);
+    console.log("[findMatch] 1차 매칭 시도:", { targetId: best.id, targetUser1: best.data().user1Id });
+    const result = await tryMatch(best);
+    console.log("[findMatch] 1차 매칭 성공:", result);
+    return result;
   }
 
-  // 매칭 실패
+  // 대기 상대 없음 — "상관없음"이면 AI 폴백
   if (type === "any") {
-    // 상관없음이면 AI로 폴백
+    console.log("[findMatch] 대기 상대 없음 + type=any → AI 폴백");
     const id = await createConnection(userId, "ai", emotionTags);
-    console.log("[Firestore] findMatch AI 폴백:", id);
     return { connectionId: id, status: "matched" };
   }
 
-  // 사람 매칭 대기
+  // 사람 매칭 대기 생성
   const id = await createConnection(userId, "human", emotionTags);
-  console.log("[Firestore] findMatch 대기 생성:", id);
+  console.log("[findMatch] 대기 연결 생성 완료:", { connectionId: id, userId });
+
+  // 2차 검색: 대기 생성 직후 다시 검색 (레이스 컨디션 방지)
+  // 두 유저가 동시에 대기를 만든 경우, 여기서 서로를 발견
+  const retryCandidates = await searchWaiting();
+  console.log("[findMatch] 2차 검색 결과:", {
+    후보수: retryCandidates.length,
+    후보목록: retryCandidates.map((d) => ({ id: d.id, user1: d.data().user1Id, status: d.data().status })),
+  });
+
+  if (retryCandidates.length > 0) {
+    const best = pickBest(retryCandidates);
+    console.log("[findMatch] 2차 매칭 시도:", { myId: id, targetId: best.id, targetUser1: best.data().user1Id });
+
+    // Tie-breaking: ID가 더 작은 쪽이 cancel하고 상대에게 매칭
+    // ID가 더 큰 쪽은 대기 유지 → onSnapshot으로 매칭 감지
+    if (id < best.id) {
+      console.log("[findMatch] 내 ID가 더 작음 → 내가 cancel하고 상대에게 매칭:", { myId: id, targetId: best.id });
+      try {
+        await updateDoc(doc(db, "connections", id), { status: "cancelled" });
+        console.log("[findMatch] 내 대기 취소 완료:", id);
+      } catch (e) {
+        console.warn("[findMatch] 내 대기 취소 실패:", e);
+      }
+      const result = await tryMatch(best);
+      console.log("[findMatch] 2차 매칭 성공:", result);
+      return result;
+    } else {
+      console.log("[findMatch] 내 ID가 더 큼 → 대기 유지 (상대가 매칭해줄 것):", { myId: id, targetId: best.id });
+      // 대기 유지 — 상대 클라이언트가 내 connection을 매칭해줌
+      // onSnapshot 리스너가 status=matched를 감지하면 자동으로 채팅 이동
+    }
+  }
+
+  console.log("[findMatch] 매칭 상대 없음 → 대기 유지:", id);
   return { connectionId: id, status: "waiting" };
 }
 
