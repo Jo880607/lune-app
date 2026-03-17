@@ -6,7 +6,8 @@
       "Bash(netstat -ano)",
       "Bash(tasklist)",
       "Bash(cat \"/c/Users/USER/Desktop/winter-sunshine-projects/lune-app/app/\\(auth\\)/onboarding/page.tsx\")",
-      "Bash(cat \"/c/Users/USER/Desktop/winter-sunshine-projects/lune-app/app/\\(auth\\)/login/page.tsx\")"
+      "Bash(cat \"/c/Users/USER/Desktop/winter-sunshine-projects/lune-app/app/\\(auth\\)/login/page.tsx\")",
+      "Bash(curl:*)"
     ]
   }
 }
