@@ -5,13 +5,15 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
   query,
   where,
   orderBy,
+  limit,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Record, User, WeeklyAnalysis } from "@/types";
+import { Record, User, WeeklyAnalysis, Connection, Message } from "@/types";
 
 // 기록 저장
 export async function saveRecord(
@@ -267,4 +269,244 @@ export async function getWeeklyAnalysis(
   const data = { id: snapshot.id, ...snapshot.data() } as WeeklyAnalysis;
   console.log("[Firestore] getWeeklyAnalysis 성공:", data.headline);
   return data;
+}
+
+// ===== 연결 (Connect) 관련 함수 =====
+
+// 연결 생성
+export async function createConnection(
+  userId: string,
+  type: "human" | "ai" | "any",
+  emotionTags: string[]
+): Promise<string> {
+  const user = await getUser(userId);
+  const nickname = user?.nickname || "익명";
+  const today = new Date().toISOString().split("T")[0];
+
+  const connectionData: Omit<Connection, "id"> = {
+    user1Id: userId,
+    user2Id: type === "ai" ? "ai" : null,
+    type,
+    emotionTags,
+    status: type === "ai" ? "matched" : "waiting",
+    isAI: type === "ai",
+    user1Nickname: nickname,
+    user2Nickname: type === "ai" ? "달빛" : "",
+    date: today,
+    createdAt: Timestamp.now(),
+  };
+
+  const docRef = await addDoc(collection(db, "connections"), connectionData);
+  console.log("[Firestore] createConnection 성공:", docRef.id);
+  return docRef.id;
+}
+
+// 매칭 상대 찾기
+export async function findMatch(
+  userId: string,
+  type: "human" | "ai" | "any",
+  emotionTags: string[]
+): Promise<{ connectionId: string; status: "matched" | "waiting" }> {
+  console.log("[Firestore] findMatch 시작:", { userId, type, emotionTags });
+
+  // AI 연결
+  if (type === "ai") {
+    const id = await createConnection(userId, "ai", emotionTags);
+    return { connectionId: id, status: "matched" };
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  // 대기 중인 연결 찾기
+  try {
+    const q = query(
+      collection(db, "connections"),
+      where("status", "==", "waiting"),
+      limit(50)
+    );
+    const snapshot = await getDocs(q);
+
+    // 오늘 날짜 + 자기 자신 제외 필터링
+    const candidates = snapshot.docs.filter((d) => {
+      const data = d.data();
+      return data.date === today && data.user1Id !== userId;
+    });
+
+    if (candidates.length > 0) {
+      let bestMatch = candidates[0];
+
+      if (type === "human" && emotionTags.length > 0) {
+        // 감정 태그 유사도 기반 정렬
+        const scored = candidates.map((d) => {
+          const data = d.data();
+          const overlap = emotionTags.filter(
+            (t) => data.emotionTags?.includes(t)
+          ).length;
+          return { doc: d, score: overlap };
+        });
+        scored.sort((a, b) => b.score - a.score);
+        bestMatch = scored[0].doc;
+      } else {
+        // 랜덤 선택
+        bestMatch = candidates[Math.floor(Math.random() * candidates.length)];
+      }
+
+      // 매칭 성공
+      const currentUser = await getUser(userId);
+      const nickname = currentUser?.nickname || "익명";
+      await updateDoc(doc(db, "connections", bestMatch.id), {
+        user2Id: userId,
+        user2Nickname: nickname,
+        status: "matched",
+      });
+      console.log("[Firestore] findMatch 매칭 성공:", bestMatch.id);
+      return { connectionId: bestMatch.id, status: "matched" };
+    }
+  } catch (error) {
+    console.error("[Firestore] findMatch 검색 에러:", error);
+  }
+
+  // 매칭 실패
+  if (type === "any") {
+    // 상관없음이면 AI로 폴백
+    const id = await createConnection(userId, "ai", emotionTags);
+    console.log("[Firestore] findMatch AI 폴백:", id);
+    return { connectionId: id, status: "matched" };
+  }
+
+  // 사람 매칭 대기
+  const id = await createConnection(userId, "human", emotionTags);
+  console.log("[Firestore] findMatch 대기 생성:", id);
+  return { connectionId: id, status: "waiting" };
+}
+
+// 연결 정보 조회
+export async function getConnection(
+  connectionId: string
+): Promise<Connection | null> {
+  const docRef = doc(db, "connections", connectionId);
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) return null;
+  return { id: snapshot.id, ...snapshot.data() } as Connection;
+}
+
+// 오늘 연결 조회
+export async function getTodayConnection(
+  userId: string
+): Promise<Connection | null> {
+  const today = new Date().toISOString().split("T")[0];
+
+  // user1 또는 user2로 참여한 연결 찾기
+  const q1 = query(
+    collection(db, "connections"),
+    where("user1Id", "==", userId)
+  );
+  const q2 = query(
+    collection(db, "connections"),
+    where("user2Id", "==", userId)
+  );
+
+  const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+  const allDocs = [...snap1.docs, ...snap2.docs];
+  // 오늘 날짜 필터링
+  const todayDocs = allDocs.filter((d) => d.data().date === today);
+
+  if (todayDocs.length === 0) return null;
+
+  // 활성 연결 우선 (matched > waiting > ended)
+  const matched = todayDocs.find((d) => d.data().status === "matched");
+  if (matched) return { id: matched.id, ...matched.data() } as Connection;
+
+  const waiting = todayDocs.find((d) => d.data().status === "waiting");
+  if (waiting) return { id: waiting.id, ...waiting.data() } as Connection;
+
+  const ended = todayDocs.find((d) => d.data().status === "ended");
+  if (ended) return { id: ended.id, ...ended.data() } as Connection;
+
+  return { id: todayDocs[0].id, ...todayDocs[0].data() } as Connection;
+}
+
+// 메시지 전송
+export async function sendMessage(
+  connectionId: string,
+  senderId: string,
+  content: string
+): Promise<string> {
+  const messageData: Omit<Message, "id"> = {
+    senderId,
+    content,
+    createdAt: Timestamp.now(),
+  };
+
+  const docRef = await addDoc(
+    collection(db, "connections", connectionId, "messages"),
+    messageData
+  );
+  console.log("[Firestore] sendMessage 성공:", docRef.id);
+  return docRef.id;
+}
+
+// 메시지 목록 조회
+export async function getMessages(
+  connectionId: string
+): Promise<Message[]> {
+  try {
+    const q = query(
+      collection(db, "connections", connectionId, "messages"),
+      orderBy("createdAt", "asc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    })) as Message[];
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    if (err.code === "failed-precondition" || err.message?.includes("index")) {
+      const snapshot = await getDocs(
+        collection(db, "connections", connectionId, "messages")
+      );
+      const messages = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Message[];
+      messages.sort((a, b) => a.createdAt.toMillis() - b.createdAt.toMillis());
+      return messages;
+    }
+    throw error;
+  }
+}
+
+// 오늘 메시지 횟수 확인 (최대 2회)
+export async function checkMessageCount(
+  connectionId: string,
+  userId: string
+): Promise<{ count: number; canSend: boolean; lastSentAt: Date | null }> {
+  const snapshot = await getDocs(
+    collection(db, "connections", connectionId, "messages")
+  );
+
+  let lastSentAt: Date | null = null;
+  let count = 0;
+
+  for (const d of snapshot.docs) {
+    const data = d.data();
+    if (data.senderId === userId) {
+      count++;
+      const sentDate = data.createdAt.toDate();
+      if (!lastSentAt || sentDate.getTime() > lastSentAt.getTime()) {
+        lastSentAt = sentDate;
+      }
+    }
+  }
+
+  // 2시간 간격 체크
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+  const canSend =
+    count < 2 &&
+    (!lastSentAt || lastSentAt.getTime() < twoHoursAgo.getTime());
+
+  return { count, canSend, lastSentAt };
 }
