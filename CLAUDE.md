@@ -183,14 +183,14 @@ const analysisPrompt = `
 
 ### 폰트
 ```
-메인: DotGothic16 (Google Fonts) - 한/영 모두 지원
-타이틀: Press Start 2P (Google Fonts) - 영문 강조용
+메인: Galmuri11 (CDN: https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css) - 한글 픽셀 폰트
+타이틀: Press Start 2P (Google Fonts) - LUNE, ADMIN 등 영문 타이틀용
 ```
 
 ### 버튼 스타일
 ```css
 .pixel-btn {
-  font-family: 'DotGothic16', monospace;
+  font-family: 'Galmuri11', monospace;
   background: #C8A8E9;
   color: #0D0D1A;
   border: none;

@@ -87,3 +87,16 @@ export interface WaitlistEntry {
   lastVisitDate: string | null;
   createdAt: Timestamp;
 }
+
+// 16x16 픽셀 아바타 데이터 (각 픽셀은 색상 hex 또는 null)
+export type AvatarData = (string | null)[][];
+
+export interface GalleryAvatar {
+  id?: string;
+  userId: string;
+  avatarData: AvatarData;
+  likes: number;
+  likedBy: string[]; // 좋아요 누른 유저 uid 목록
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}

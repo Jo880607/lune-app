@@ -19,8 +19,10 @@ import {
   saveConversation,
   deleteConversationMessages,
   subscribeToConnection,
+  getUserAvatar,
 } from "@/lib/firestore";
-import { Connection, Message } from "@/types";
+import { Connection, Message, AvatarData } from "@/types";
+import PixelAvatar from "@/components/PixelAvatar";
 
 // 픽셀 별 아바타 (사람 상대방)
 const PixelStarAvatar = ({ size = 32 }: { size?: number }) => (
@@ -93,6 +95,7 @@ export default function ChatPage() {
   const [canSend, setCanSend] = useState(true);
   const [cooldownText, setCooldownText] = useState<string | null>(null);
   const [lastSentAt, setLastSentAt] = useState<Date | null>(null);
+  const [partnerAvatarData, setPartnerAvatarData] = useState<AvatarData | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 보관 관련 상태
@@ -127,6 +130,28 @@ export default function ChatPage() {
         return;
       }
       setConnection(conn);
+
+      // 상대방 아바타 불러오기 (AI가 아닌 경우)
+      if (!conn.isAI) {
+        const partnerId = conn.user1Id === user.uid ? conn.user2Id : conn.user1Id;
+
+        // 디버그 로그
+        console.log("[Chat Debug] connection.user1Id:", conn.user1Id);
+        console.log("[Chat Debug] connection.user2Id:", conn.user2Id);
+        console.log("[Chat Debug] currentUser.uid:", user.uid);
+        console.log("[Chat Debug] partnerUserId:", partnerId);
+
+        if (partnerId) {
+          const avatar = await getUserAvatar(partnerId);
+          console.log("[Chat Debug] getUserAvatar result:", avatar);
+          if (avatar) {
+            setPartnerAvatarData(avatar);
+          }
+        } else {
+          console.log("[Chat Debug] partnerId is null/undefined!");
+        }
+      }
+
       setLoading(false);
     };
 
@@ -356,6 +381,9 @@ export default function ChatPage() {
 
   // 상대방 정보 결정
   const isUser1 = user && connection?.user1Id === user.uid;
+
+  // 디버그: 상대방 아바타 데이터 확인
+  console.log("[Chat] partnerAvatarData:", partnerAvatarData);
   const partnerNickname = connection
     ? connection.isAI
       ? "달빛"
@@ -386,7 +414,7 @@ export default function ChatPage() {
               {connection.isAI ? (
                 <PixelRobotAvatar size={32} />
               ) : (
-                <PixelStarAvatar size={32} />
+                <PixelAvatar avatarData={partnerAvatarData} size="md" />
               )}
               <div className="flex items-center gap-2">
                 <span className="text-[var(--text)]">{partnerNickname}</span>

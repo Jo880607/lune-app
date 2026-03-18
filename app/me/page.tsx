@@ -12,9 +12,13 @@ import {
   getWeeklyAnalysis,
   saveAnalysis,
   getCurrentWeekKey,
+  getUserAvatar,
+  saveAvatar,
 } from "@/lib/firestore";
 import { analyzeWeeklyRecords } from "@/lib/ai";
-import { WeeklyAnalysis } from "@/types";
+import { WeeklyAnalysis, AvatarData } from "@/types";
+import PixelAvatar from "@/components/PixelAvatar";
+import PixelAvatarEditor from "@/components/PixelAvatarEditor";
 
 type TabType = "weekly" | "monthly" | "yearly";
 
@@ -146,6 +150,36 @@ const PixelSparkleIcon = ({ size = 24, color = "var(--yellow)" }: { size?: numbe
   </svg>
 );
 
+const PixelPaletteIcon = ({ size = 24, color = "var(--accent)" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
+    <rect x="5" y="2" width="6" height="1" fill={color} />
+    <rect x="3" y="3" width="2" height="1" fill={color} />
+    <rect x="11" y="3" width="2" height="1" fill={color} />
+    <rect x="2" y="4" width="1" height="1" fill={color} />
+    <rect x="13" y="4" width="1" height="1" fill={color} />
+    <rect x="1" y="5" width="1" height="1" fill={color} />
+    <rect x="14" y="5" width="1" height="1" fill={color} />
+    <rect x="1" y="6" width="1" height="1" fill={color} />
+    <rect x="14" y="6" width="1" height="1" fill={color} />
+    <rect x="1" y="7" width="1" height="1" fill={color} />
+    <rect x="14" y="7" width="1" height="1" fill={color} />
+    <rect x="1" y="8" width="1" height="1" fill={color} />
+    <rect x="14" y="8" width="1" height="1" fill={color} />
+    <rect x="1" y="9" width="1" height="1" fill={color} />
+    <rect x="14" y="9" width="1" height="1" fill={color} />
+    <rect x="2" y="10" width="1" height="1" fill={color} />
+    <rect x="13" y="10" width="1" height="1" fill={color} />
+    <rect x="3" y="11" width="1" height="1" fill={color} />
+    <rect x="12" y="11" width="1" height="1" fill={color} />
+    <rect x="4" y="12" width="8" height="1" fill={color} />
+    <rect x="4" y="5" width="2" height="2" fill="#FF8FAB" />
+    <rect x="7" y="4" width="2" height="2" fill="#FFE566" />
+    <rect x="10" y="5" width="2" height="2" fill="#7BE4A8" />
+    <rect x="5" y="8" width="2" height="2" fill="#9B72CF" />
+    <rect x="9" y="8" width="2" height="2" fill="#C8A8E9" />
+  </svg>
+);
+
 // 작은 픽셀 초승달 아이콘 (위로 문구용)
 const PixelMoonSmall = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
@@ -258,6 +292,10 @@ export default function MePage() {
   const [weeklyAnalysis, setWeeklyAnalysis] = useState<WeeklyAnalysis | null>(null);
   const [noRecords, setNoRecords] = useState(false);
   const [weekLabel, setWeekLabel] = useState("");
+  const [avatarData, setAvatarData] = useState<AvatarData | null>(null);
+  const [showAvatarEditor, setShowAvatarEditor] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -266,11 +304,19 @@ export default function MePage() {
         return;
       }
 
+      setCurrentUserId(currentUser.uid);
+
       try {
         // 유저 정보 불러오기
         const userData = await getUser(currentUser.uid);
         if (userData) {
           setNickname(userData.nickname);
+        }
+
+        // 아바타 데이터 불러오기
+        const avatar = await getUserAvatar(currentUser.uid);
+        if (avatar) {
+          setAvatarData(avatar);
         }
 
         // 주차 라벨 설정
@@ -328,6 +374,21 @@ export default function MePage() {
     ? getComfortMessage(weeklyAnalysis.emotions)
     : getComfortMessage(mockWeeklyAnalysis.emotions);
 
+  const handleSaveAvatar = async (data: AvatarData) => {
+    if (!currentUserId) return;
+
+    setSavingAvatar(true);
+    try {
+      await saveAvatar(currentUserId, data);
+      setAvatarData(data);
+      setShowAvatarEditor(false);
+    } catch (error) {
+      console.error("[Me] 아바타 저장 실패:", error);
+    } finally {
+      setSavingAvatar(false);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -357,8 +418,30 @@ export default function MePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg)]">
+      {/* 아바타 에디터 모달 */}
+      {showAvatarEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <PixelAvatarEditor
+            initialData={avatarData || undefined}
+            onSave={handleSaveAvatar}
+            onCancel={() => setShowAvatarEditor(false)}
+            saving={savingAvatar}
+          />
+        </div>
+      )}
+
       {/* 헤더 */}
       <header className="p-6 text-center">
+        {/* 아바타 */}
+        <div className="flex flex-col items-center gap-3 mb-4">
+          <PixelAvatar avatarData={avatarData} size="lg" />
+          <button
+            onClick={() => setShowAvatarEditor(true)}
+            className="text-xs text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+          >
+            편집하기
+          </button>
+        </div>
         <h1 className="font-galmuri text-xl text-[var(--accent)]">
           {loading ? "..." : `${nickname || "익명"}님`}
         </h1>
@@ -627,6 +710,13 @@ export default function MePage() {
           >
             <PixelSparkleIcon size={24} color="var(--muted)" />
             <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">연결</span>
+          </Link>
+          <Link
+            href="/gallery"
+            className="flex flex-col items-center gap-1 group"
+          >
+            <PixelPaletteIcon size={24} color="var(--muted)" />
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">갤러리</span>
           </Link>
         </div>
       </nav>

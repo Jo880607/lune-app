@@ -11,7 +11,10 @@ import {
   getTodayConnection,
   getWeeklyAnalysis,
   getCurrentWeekKey,
+  getUserAvatar,
 } from "@/lib/firestore";
+import { AvatarData } from "@/types";
+import PixelAvatar from "@/components/PixelAvatar";
 
 type ConnectionType = "human" | "ai" | "any" | null;
 
@@ -143,6 +146,36 @@ const PixelSparkleIcon = ({ size = 24, color = "var(--yellow)" }: { size?: numbe
   </svg>
 );
 
+const PixelPaletteIcon = ({ size = 24, color = "var(--accent)" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
+    <rect x="5" y="2" width="6" height="1" fill={color} />
+    <rect x="3" y="3" width="2" height="1" fill={color} />
+    <rect x="11" y="3" width="2" height="1" fill={color} />
+    <rect x="2" y="4" width="1" height="1" fill={color} />
+    <rect x="13" y="4" width="1" height="1" fill={color} />
+    <rect x="1" y="5" width="1" height="1" fill={color} />
+    <rect x="14" y="5" width="1" height="1" fill={color} />
+    <rect x="1" y="6" width="1" height="1" fill={color} />
+    <rect x="14" y="6" width="1" height="1" fill={color} />
+    <rect x="1" y="7" width="1" height="1" fill={color} />
+    <rect x="14" y="7" width="1" height="1" fill={color} />
+    <rect x="1" y="8" width="1" height="1" fill={color} />
+    <rect x="14" y="8" width="1" height="1" fill={color} />
+    <rect x="1" y="9" width="1" height="1" fill={color} />
+    <rect x="14" y="9" width="1" height="1" fill={color} />
+    <rect x="2" y="10" width="1" height="1" fill={color} />
+    <rect x="13" y="10" width="1" height="1" fill={color} />
+    <rect x="3" y="11" width="1" height="1" fill={color} />
+    <rect x="12" y="11" width="1" height="1" fill={color} />
+    <rect x="4" y="12" width="8" height="1" fill={color} />
+    <rect x="4" y="5" width="2" height="2" fill="#FF8FAB" />
+    <rect x="7" y="4" width="2" height="2" fill="#FFE566" />
+    <rect x="10" y="5" width="2" height="2" fill="#7BE4A8" />
+    <rect x="5" y="8" width="2" height="2" fill="#9B72CF" />
+    <rect x="9" y="8" width="2" height="2" fill="#C8A8E9" />
+  </svg>
+);
+
 // 픽셀 아바타: 별 (사람)
 const PixelStarAvatar = ({ size = 48 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
@@ -207,6 +240,7 @@ export default function ConnectPage() {
     "loading" | "select" | "matching" | "waiting" | "ended"
   >("loading");
   const [waitingConnectionId, setWaitingConnectionId] = useState<string | null>(null);
+  const [avatarData, setAvatarData] = useState<AvatarData | null>(null);
 
   // Auth + 오늘 연결 확인
   useEffect(() => {
@@ -218,6 +252,12 @@ export default function ConnectPage() {
       setUser(currentUser);
 
       try {
+        // 아바타 데이터 불러오기
+        const avatar = await getUserAvatar(currentUser.uid);
+        if (avatar) {
+          setAvatarData(avatar);
+        }
+
         const todayConn = await getTodayConnection(currentUser.uid);
         if (todayConn) {
           if (todayConn.status === "matched") {
@@ -370,7 +410,7 @@ export default function ConnectPage() {
                     : "border-[var(--bg3)] bg-[var(--bg2)] hover:border-[var(--muted)]"
                 }`}
               >
-                <PixelStarAvatar size={48} />
+                <PixelAvatar avatarData={avatarData} size="md" />
                 <div className="text-left">
                   <p className={`text-base ${selected === "human" ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
                     사람과 대화할게요
@@ -391,7 +431,7 @@ export default function ConnectPage() {
                 }`}
               >
                 <div className="relative">
-                  <PixelRobotAvatar size={48} />
+                  <PixelAvatar avatarData={null} size="md" />
                   <span className="absolute -top-1 -right-1 bg-[var(--accent)] text-[var(--bg)] text-[8px] px-1 rounded">
                     AI
                   </span>
@@ -415,7 +455,7 @@ export default function ConnectPage() {
                     : "border-[var(--bg3)] bg-[var(--bg2)] hover:border-[var(--muted)]"
                 }`}
               >
-                <PixelDotsAvatar size={48} />
+                <PixelAvatar avatarData={avatarData} size="md" />
                 <div className="text-left">
                   <p className={`text-base ${selected === "any" ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
                     상관없어요
@@ -473,6 +513,13 @@ export default function ConnectPage() {
           >
             <PixelSparkleIcon size={24} color="var(--accent)" />
             <span className="text-xs font-galmuri text-[var(--accent)]">연결</span>
+          </Link>
+          <Link
+            href="/gallery"
+            className="flex flex-col items-center gap-1 group"
+          >
+            <PixelPaletteIcon size={24} color="var(--muted)" />
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">갤러리</span>
           </Link>
         </div>
       </nav>

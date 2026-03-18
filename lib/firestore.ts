@@ -18,7 +18,7 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Record, User, WeeklyAnalysis, Connection, Message, WaitlistEntry, SavedConversation } from "@/types";
+import { Record, User, WeeklyAnalysis, Connection, Message, WaitlistEntry, SavedConversation, AvatarData, GalleryAvatar } from "@/types";
 
 // 기록 저장
 export async function saveRecord(
@@ -939,4 +939,145 @@ export function subscribeToConnection(
       callback(null);
     }
   });
+}
+
+// ===== 아바타 (Avatar) 관련 함수 =====
+
+// 헬퍼: 1차원 배열을 chunkSize 크기의 2차원 배열로 변환
+function chunkArray<T>(arr: T[], chunkSize: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += chunkSize) {
+    result.push(arr.slice(i, i + chunkSize));
+  }
+  return result;
+}
+
+// 아바타 저장 (users/{uid}에 avatarData 저장 + gallery에 등록)
+// Firestore는 중첩 배열을 지원하지 않으므로 16x16 → 256 평탄화
+export async function saveAvatar(
+  userId: string,
+  avatarData: AvatarData
+): Promise<void> {
+  console.log("[Firestore] saveAvatar 시작:", userId);
+
+  // 16x16 2차원 배열을 1차원 배열(256개)로 평탄화
+  const flatAvatarData = avatarData.flat();
+
+  // users 컬렉션에 avatarData 저장
+  await updateDoc(doc(db, "users", userId), {
+    avatarData: flatAvatarData,
+  });
+
+  // gallery 컬렉션에 저장/업데이트
+  const galleryDocRef = doc(db, "gallery", userId);
+  const existingDoc = await getDoc(galleryDocRef);
+
+  if (existingDoc.exists()) {
+    await updateDoc(galleryDocRef, {
+      avatarData: flatAvatarData,
+      updatedAt: Timestamp.now(),
+    });
+  } else {
+    await setDoc(galleryDocRef, {
+      userId,
+      avatarData: flatAvatarData,
+      likes: 0,
+      likedBy: [],
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+  }
+
+  console.log("[Firestore] saveAvatar 성공");
+}
+
+// 유저 아바타 조회 (1차원 배열 → 16x16 2차원 배열로 복원)
+export async function getUserAvatar(
+  userId: string
+): Promise<AvatarData | null> {
+  const userDoc = await getDoc(doc(db, "users", userId));
+  if (!userDoc.exists()) return null;
+
+  const flatData = userDoc.data().avatarData;
+  if (!flatData) return null;
+
+  // 1차원 배열(256개)을 16x16 2차원 배열로 복원
+  return chunkArray(flatData as (string | null)[], 16);
+}
+
+// 갤러리 아바타 목록 조회 (좋아요 순)
+// 1차원 배열 → 16x16 2차원 배열로 복원
+export async function getGalleryAvatars(): Promise<GalleryAvatar[]> {
+  console.log("[Firestore] getGalleryAvatars 시작");
+
+  const restoreAvatarData = (docSnap: QueryDocumentSnapshot<DocumentData>): GalleryAvatar => {
+    const data = docSnap.data();
+    return {
+      id: docSnap.id,
+      ...data,
+      avatarData: data.avatarData
+        ? chunkArray(data.avatarData as (string | null)[], 16)
+        : null,
+    } as GalleryAvatar;
+  };
+
+  try {
+    const q = query(
+      collection(db, "gallery"),
+      orderBy("likes", "desc"),
+      limit(50)
+    );
+    const snapshot = await getDocs(q);
+    const avatars = snapshot.docs.map(restoreAvatarData);
+    console.log("[Firestore] getGalleryAvatars 성공:", avatars.length, "개");
+    return avatars;
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    if (err.code === "failed-precondition" || err.message?.includes("index")) {
+      console.log("[Firestore] 인덱스 없음 - 전체 조회 후 정렬");
+      const snapshot = await getDocs(collection(db, "gallery"));
+      const avatars = snapshot.docs.map(restoreAvatarData);
+      avatars.sort((a, b) => b.likes - a.likes);
+      return avatars;
+    }
+    throw error;
+  }
+}
+
+// 좋아요 토글
+export async function toggleAvatarLike(
+  avatarId: string,
+  userId: string
+): Promise<{ liked: boolean; newLikes: number }> {
+  console.log("[Firestore] toggleAvatarLike:", { avatarId, userId });
+
+  const docRef = doc(db, "gallery", avatarId);
+  const snapshot = await getDoc(docRef);
+
+  if (!snapshot.exists()) {
+    throw new Error("아바타를 찾을 수 없어요");
+  }
+
+  const data = snapshot.data() as GalleryAvatar;
+  const likedBy = data.likedBy || [];
+  const alreadyLiked = likedBy.includes(userId);
+
+  let newLikedBy: string[];
+  let newLikes: number;
+
+  if (alreadyLiked) {
+    newLikedBy = likedBy.filter((id) => id !== userId);
+    newLikes = Math.max(0, data.likes - 1);
+  } else {
+    newLikedBy = [...likedBy, userId];
+    newLikes = data.likes + 1;
+  }
+
+  await updateDoc(docRef, {
+    likedBy: newLikedBy,
+    likes: newLikes,
+  });
+
+  console.log("[Firestore] toggleAvatarLike 성공:", { liked: !alreadyLiked, newLikes });
+  return { liked: !alreadyLiked, newLikes };
 }

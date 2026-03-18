@@ -259,6 +259,36 @@ const PixelSparkleIcon = ({ size = 24, color = "var(--yellow)" }: { size?: numbe
   </svg>
 );
 
+const PixelPaletteIcon = ({ size = 24, color = "var(--accent)" }: { size?: number; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" style={{ imageRendering: 'pixelated' }}>
+    <rect x="5" y="2" width="6" height="1" fill={color} />
+    <rect x="3" y="3" width="2" height="1" fill={color} />
+    <rect x="11" y="3" width="2" height="1" fill={color} />
+    <rect x="2" y="4" width="1" height="1" fill={color} />
+    <rect x="13" y="4" width="1" height="1" fill={color} />
+    <rect x="1" y="5" width="1" height="1" fill={color} />
+    <rect x="14" y="5" width="1" height="1" fill={color} />
+    <rect x="1" y="6" width="1" height="1" fill={color} />
+    <rect x="14" y="6" width="1" height="1" fill={color} />
+    <rect x="1" y="7" width="1" height="1" fill={color} />
+    <rect x="14" y="7" width="1" height="1" fill={color} />
+    <rect x="1" y="8" width="1" height="1" fill={color} />
+    <rect x="14" y="8" width="1" height="1" fill={color} />
+    <rect x="1" y="9" width="1" height="1" fill={color} />
+    <rect x="14" y="9" width="1" height="1" fill={color} />
+    <rect x="2" y="10" width="1" height="1" fill={color} />
+    <rect x="13" y="10" width="1" height="1" fill={color} />
+    <rect x="3" y="11" width="1" height="1" fill={color} />
+    <rect x="12" y="11" width="1" height="1" fill={color} />
+    <rect x="4" y="12" width="8" height="1" fill={color} />
+    <rect x="4" y="5" width="2" height="2" fill="#FF8FAB" />
+    <rect x="7" y="4" width="2" height="2" fill="#FFE566" />
+    <rect x="10" y="5" width="2" height="2" fill="#7BE4A8" />
+    <rect x="5" y="8" width="2" height="2" fill="#9B72CF" />
+    <rect x="9" y="8" width="2" height="2" fill="#C8A8E9" />
+  </svg>
+);
+
 const PixelMicLarge = ({ isRecording = false }: { isRecording?: boolean }) => {
   const c = isRecording ? "#fff" : "var(--text)";
   return (
@@ -696,6 +726,13 @@ export default function RecordPage() {
           >
             <PixelSparkleIcon size={24} color="var(--muted)" />
             <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">연결</span>
+          </Link>
+          <Link
+            href="/gallery"
+            className="flex flex-col items-center gap-1 group"
+          >
+            <PixelPaletteIcon size={24} color="var(--muted)" />
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">갤러리</span>
           </Link>
         </div>
       </nav>

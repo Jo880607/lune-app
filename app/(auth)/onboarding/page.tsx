@@ -389,12 +389,28 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <div className="mt-12 w-full max-w-xs">
+              {/* 아바타 안내 */}
+              <div className="mt-8 p-4 bg-[var(--bg2)] border border-[var(--bg3)] rounded-lg text-center">
+                <p className="text-[var(--accent)] text-sm mb-2">
+                  나만의 아바타를 만들어보세요!
+                </p>
+                <p className="text-[var(--muted)] text-xs">
+                  연결할 때 상대에게 보여지는 나의 모습이에요
+                </p>
+              </div>
+
+              <div className="mt-8 w-full max-w-xs space-y-3">
                 <button
-                  onClick={() => router.push("/record")}
+                  onClick={() => router.push("/me")}
                   className="pixel-btn w-full text-lg"
                 >
-                  시작하기
+                  아바타 만들기
+                </button>
+                <button
+                  onClick={() => router.push("/record")}
+                  className="w-full py-3 text-[var(--muted)] text-sm hover:text-[var(--text)] transition-colors"
+                >
+                  나중에 할게요
                 </button>
               </div>
             </>

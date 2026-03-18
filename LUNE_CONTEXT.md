@@ -40,7 +40,7 @@
 
 ```
 ✅ 전체 기획 (타겟/수익/UX/안전/AI윤리)
-✅ 픽셀 레트로 UI (DotGothic16 + Press Start 2P 폰트)
+✅ 픽셀 레트로 UI (Galmuri11 + Press Start 2P 폰트)
 ✅ Firebase Auth (전화번호 로그인)
 ✅ 온보딩 3단계 (환영 → 닉네임 → 첫 기록)
 ✅ 기록 화면 (음성/텍스트, 저장 후 수정 불가)
@@ -56,6 +56,8 @@
 ✅ 대기자 명단 시스템 (/waitlist)
 ✅ Vercel 배포
 ✅ Firestore 보안 규칙
+✅ 대화 보관 기능 (상호 동의 시 저장)
+✅ Galmuri11 한글 픽셀 폰트 전체 통일
 ```
 
 ---
@@ -115,7 +117,7 @@ lune-app/
 --muted:   #6B6B8A  /* 흐린 텍스트 */
 ```
 
-**폰트:** DotGothic16 (본문) + Press Start 2P (타이틀)
+**폰트:** Galmuri11 (본문, CDN: https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css) + Press Start 2P (타이틀)
 **네비게이션:** 탭 3개 고정 — 기록 / 나 / 연결
 
 ---
@@ -184,9 +186,9 @@ OPENAI_API_KEY=실제키
 ## 남은 작업
 
 ```
-⬜ 파비콘/PWA 아이콘 다듬기 (현재 달이 너무 큼)
+⬜ 픽셀 아바타 에디터 시스템 (16x16 직접 그리기)
+   └ 적용 위치: 연결화면, 채팅화면, 나 탭, 대기자명단, 온보딩
 ⬜ 이모지 아이콘 → 픽셀 아이콘 교체 (Piskel 등으로 직접 제작)
-⬜ 대화 보관 기능 (상호 동의 시 저장 UI)
 ⬜ 마케팅 (빠더너스 문상훈 협업 검토)
 ⬜ 커스텀 도메인 연결 (lune.kr 등)
 ⬜ 네이티브 앱 래핑 (Capacitor, 앱스토어 출시)
