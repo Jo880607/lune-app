@@ -359,7 +359,7 @@ export default function MePage() {
     <div className="min-h-screen flex flex-col bg-[var(--bg)]">
       {/* 헤더 */}
       <header className="p-6 text-center">
-        <h1 className="pixel-title text-xl text-[var(--accent)]">
+        <h1 className="font-galmuri text-xl text-[var(--accent)]">
           {loading ? "..." : `${nickname || "익명"}님`}
         </h1>
       </header>
@@ -455,7 +455,7 @@ export default function MePage() {
                 <p className="text-[var(--muted)] text-sm mb-2">이번 주 당신은</p>
 
                 {/* 헤드라인 */}
-                <h2 className="text-xl text-[var(--text)] mb-3">
+                <h2 className="text-base font-galmuri text-[var(--text)] mb-3">
                   {weeklyAnalysis.headline}
                   <span className="cursor-blink text-[var(--accent)]">_</span>
                 </h2>
@@ -523,7 +523,7 @@ export default function MePage() {
             <p className="text-[var(--muted)] text-xs mb-4">{mockMonthlyAnalysis.month} 분석</p>
 
             {/* 헤드라인 */}
-            <h2 className="text-xl text-[var(--text)] mb-3">
+            <h2 className="text-base font-galmuri text-[var(--text)] mb-3">
               {mockMonthlyAnalysis.headline}
               <span className="cursor-blink text-[var(--accent)]">_</span>
             </h2>
@@ -558,7 +558,7 @@ export default function MePage() {
             <p className="text-[var(--muted)] text-xs mb-4">{mockYearlyAnalysis.year} 분석</p>
 
             {/* 헤드라인 */}
-            <h2 className="text-xl text-[var(--text)] mb-6">
+            <h2 className="text-base font-galmuri text-[var(--text)] mb-6">
               {mockYearlyAnalysis.headline}
               <span className="cursor-blink text-[var(--accent)]">_</span>
             </h2>
@@ -612,21 +612,21 @@ export default function MePage() {
             className="flex flex-col items-center gap-1 group"
           >
             <PixelNoteIcon size={24} color="var(--muted)" />
-            <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)]">기록</span>
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">기록</span>
           </Link>
           <Link
             href="/me"
             className="flex flex-col items-center gap-1"
           >
             <PixelMoonIcon size={24} color="var(--accent)" />
-            <span className="text-xs text-[var(--accent)]">나</span>
+            <span className="text-xs font-galmuri text-[var(--accent)]">나</span>
           </Link>
           <Link
             href="/connect"
             className="flex flex-col items-center gap-1 group"
           >
             <PixelSparkleIcon size={24} color="var(--muted)" />
-            <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)]">연결</span>
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">연결</span>
           </Link>
         </div>
       </nav>

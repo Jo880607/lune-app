@@ -13,8 +13,9 @@ const config: Config = {
         foreground: "var(--foreground)",
       },
       fontFamily: {
-        sans: ["'DotGothic16'", "monospace"],
-        mono: ["'DotGothic16'", "monospace"],
+        sans: ["'Galmuri11'", "monospace"],
+        mono: ["'Galmuri11'", "monospace"],
+        galmuri: ["'Galmuri11'", "monospace"],
         pixel: ["'Press Start 2P'", "monospace"],
       },
     },

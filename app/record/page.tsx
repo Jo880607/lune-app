@@ -494,8 +494,8 @@ export default function RecordPage() {
     <div className="min-h-screen flex flex-col bg-[var(--bg)]">
       {/* 헤더 */}
       <header className="p-6 text-center">
-        <h1 className="pixel-title text-xl text-[var(--accent)]">기록</h1>
-        <p className="text-[var(--muted)] text-sm mt-2">오늘의 나를 남겨보세요</p>
+        <h1 className="font-galmuri text-xl text-[var(--accent)]">기록</h1>
+        <p className="font-galmuri text-[var(--muted)] text-sm mt-2">오늘의 나를 남겨보세요</p>
       </header>
 
       {/* 메인 컨텐츠 */}
@@ -545,7 +545,7 @@ export default function RecordPage() {
             <div className="mb-2">
               <PixelMicIcon size={36} color={mode === "voice" ? "var(--accent)" : "var(--muted)"} />
             </div>
-            <div className={`text-sm ${mode === "voice" ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
+            <div className={`text-sm font-galmuri ${mode === "voice" ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
               음성으로
             </div>
           </button>
@@ -560,7 +560,7 @@ export default function RecordPage() {
             <div className="mb-2">
               <PixelPencilIcon size={36} color={mode === "text" ? "var(--accent)" : "var(--muted)"} />
             </div>
-            <div className={`text-sm ${mode === "text" ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
+            <div className={`text-sm font-galmuri ${mode === "text" ? "text-[var(--accent)]" : "text-[var(--text)]"}`}>
               텍스트로
             </div>
           </button>
@@ -681,21 +681,21 @@ export default function RecordPage() {
             className="flex flex-col items-center gap-1"
           >
             <PixelNoteIcon size={24} color="var(--accent)" />
-            <span className="text-xs text-[var(--accent)]">기록</span>
+            <span className="text-xs font-galmuri text-[var(--accent)]">기록</span>
           </Link>
           <Link
             href="/me"
             className="flex flex-col items-center gap-1 group"
           >
             <PixelMoonIcon size={24} color="var(--muted)" />
-            <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)]">나</span>
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">나</span>
           </Link>
           <Link
             href="/connect"
             className="flex flex-col items-center gap-1 group"
           >
             <PixelSparkleIcon size={24} color="var(--muted)" />
-            <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)]">연결</span>
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">연결</span>
           </Link>
         </div>
       </nav>

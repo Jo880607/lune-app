@@ -299,8 +299,8 @@ export default function ConnectPage() {
     <div className="min-h-screen flex flex-col bg-[var(--bg)]">
       {/* 헤더 */}
       <header className="p-6 text-center">
-        <h1 className="pixel-title text-xl text-[var(--accent)]">연결</h1>
-        <p className="text-[var(--muted)] text-sm mt-2">
+        <h1 className="font-galmuri text-xl text-[var(--accent)]">연결</h1>
+        <p className="font-galmuri text-[var(--muted)] text-sm mt-2">
           {pageState === "matching"
             ? "연결 중..."
             : pageState === "waiting"
@@ -458,21 +458,21 @@ export default function ConnectPage() {
             className="flex flex-col items-center gap-1 group"
           >
             <PixelNoteIcon size={24} color="var(--muted)" />
-            <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)]">기록</span>
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">기록</span>
           </Link>
           <Link
             href="/me"
             className="flex flex-col items-center gap-1 group"
           >
             <PixelMoonIcon size={24} color="var(--muted)" />
-            <span className="text-xs text-[var(--muted)] group-hover:text-[var(--text)]">나</span>
+            <span className="text-xs font-galmuri text-[var(--muted)] group-hover:text-[var(--text)]">나</span>
           </Link>
           <Link
             href="/connect"
             className="flex flex-col items-center gap-1"
           >
             <PixelSparkleIcon size={24} color="var(--accent)" />
-            <span className="text-xs text-[var(--accent)]">연결</span>
+            <span className="text-xs font-galmuri text-[var(--accent)]">연결</span>
           </Link>
         </div>
       </nav>
