@@ -8,6 +8,7 @@
 **Lune** — "진짜 나를 알아가는 SDS (Self Discovery Service)"
 - 기획/개발/배포 완료 상태
 - URL: https://lune-app-eight.vercel.app
+- 도메인: luneis.me (Vercel 연결 예정)
 - GitHub: https://github.com/Jo880607/lune-app (private)
 - 로컬 경로: `C:\Users\USER\Desktop\winter-sunshine-projects\lune-app`
 
@@ -58,6 +59,10 @@
 ✅ Firestore 보안 규칙
 ✅ 대화 보관 기능 (상호 동의 시 저장)
 ✅ Galmuri11 한글 픽셀 폰트 전체 통일
+✅ 픽셀 아바타 에디터 (16x16, 8색 팔레트, 드래그 페인팅)
+✅ 아바타 갤러리 페이지 (/gallery)
+✅ 아바타 전체 적용 (연결/채팅/나 탭)
+✅ 도메인 구매 (luneis.me)
 ```
 
 ---
@@ -77,6 +82,7 @@ lune-app/
 │   ├── connect/
 │   │   ├── page.tsx             # 연결 선택 화면
 │   │   └── chat/[connectionId]/page.tsx  # 실시간 채팅
+│   ├── gallery/page.tsx         # 아바타 갤러리/에디터
 │   ├── me/page.tsx              # 나 (AI 분석)
 │   ├── record/page.tsx          # 기록 화면
 │   ├── admin/page.tsx           # 관리자 대시보드
@@ -85,6 +91,8 @@ lune-app/
 │   ├── layout.tsx               # 전역 레이아웃
 │   └── globals.css              # 전역 스타일
 ├── components/
+│   ├── PixelAvatar.tsx          # 픽셀 아바타 렌더링
+│   ├── PixelAvatarEditor.tsx    # 픽셀 아바타 에디터 (16x16, 8색)
 │   └── auth/LoginForm.tsx
 ├── lib/
 │   ├── firebase.ts              # Firebase 초기화 (하드코딩)
@@ -186,11 +194,11 @@ OPENAI_API_KEY=실제키
 ## 남은 작업
 
 ```
-⬜ 픽셀 아바타 에디터 시스템 (16x16 직접 그리기)
-   └ 적용 위치: 연결화면, 채팅화면, 나 탭, 대기자명단, 온보딩
+⬜ luneis.me 도메인 Vercel 연결 (도메인 전파 후)
+⬜ 마케팅 준비 (빠더너스 협업 검토)
 ⬜ 이모지 아이콘 → 픽셀 아이콘 교체 (Piskel 등으로 직접 제작)
-⬜ 마케팅 (빠더너스 문상훈 협업 검토)
-⬜ 커스텀 도메인 연결 (lune.kr 등)
+⬜ 콘텐츠 필터 (AI 자동 검토)
+⬜ 신고 제재 시스템
 ⬜ 네이티브 앱 래핑 (Capacitor, 앱스토어 출시)
 ```
 
