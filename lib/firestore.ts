@@ -18,7 +18,7 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { Record, User, WeeklyAnalysis, Connection, Message, WaitlistEntry } from "@/types";
+import { Record, User, WeeklyAnalysis, Connection, Message, WaitlistEntry, SavedConversation } from "@/types";
 
 // 기록 저장
 export async function saveRecord(
@@ -726,6 +726,215 @@ export function subscribeToWaitlistPosition(
   return onSnapshot(doc(db, "waitlist", normalizedPhone), (snapshot) => {
     if (snapshot.exists()) {
       callback(snapshot.data() as WaitlistEntry);
+    } else {
+      callback(null);
+    }
+  });
+}
+
+// ===== 대화 보관 (Keep) 관련 함수 =====
+
+// 보관 요청 (유저가 "보관하기" 선택)
+export async function requestKeep(
+  connectionId: string,
+  userId: string,
+  wantsToKeep: boolean
+): Promise<void> {
+  console.log("[Firestore] requestKeep:", { connectionId, userId, wantsToKeep });
+
+  const connectionDoc = await getDoc(doc(db, "connections", connectionId));
+  if (!connectionDoc.exists()) {
+    throw new Error("연결을 찾을 수 없어요");
+  }
+
+  const connection = connectionDoc.data() as Connection;
+  const isUser1 = connection.user1Id === userId;
+
+  const currentKeepRequest = connection.keepRequest || {
+    user1: null,
+    user2: null,
+  };
+
+  const updateData = {
+    keepRequest: {
+      ...currentKeepRequest,
+      [isUser1 ? "user1" : "user2"]: wantsToKeep,
+      requestedAt: Timestamp.now(),
+    },
+  };
+
+  await updateDoc(doc(db, "connections", connectionId), updateData);
+  console.log("[Firestore] requestKeep 성공");
+}
+
+// 보관 상태 조회
+export async function getKeepStatus(
+  connectionId: string
+): Promise<{
+  user1: boolean | null;
+  user2: boolean | null;
+  bothAgreed: boolean;
+  anyDeclined: boolean;
+  bothResponded: boolean;
+}> {
+  const connectionDoc = await getDoc(doc(db, "connections", connectionId));
+  if (!connectionDoc.exists()) {
+    return {
+      user1: null,
+      user2: null,
+      bothAgreed: false,
+      anyDeclined: false,
+      bothResponded: false,
+    };
+  }
+
+  const connection = connectionDoc.data() as Connection;
+  const keepRequest = connection.keepRequest || { user1: null, user2: null };
+
+  const bothResponded =
+    keepRequest.user1 !== null && keepRequest.user2 !== null;
+  const bothAgreed = keepRequest.user1 === true && keepRequest.user2 === true;
+  const anyDeclined = keepRequest.user1 === false || keepRequest.user2 === false;
+
+  return {
+    user1: keepRequest.user1,
+    user2: keepRequest.user2,
+    bothAgreed,
+    anyDeclined,
+    bothResponded,
+  };
+}
+
+// 대화 보관 (conversations 컬렉션에 저장)
+export async function saveConversation(
+  connectionId: string
+): Promise<string> {
+  console.log("[Firestore] saveConversation 시작:", connectionId);
+
+  const connection = await getConnection(connectionId);
+  if (!connection) {
+    throw new Error("연결을 찾을 수 없어요");
+  }
+
+  const messages = await getMessages(connectionId);
+  if (messages.length === 0) {
+    throw new Error("저장할 메시지가 없어요");
+  }
+
+  const conversationData: Omit<SavedConversation, "id"> = {
+    connectionId,
+    user1Id: connection.user1Id,
+    user2Id: connection.user2Id || "",
+    user1Nickname: connection.user1Nickname,
+    user2Nickname: connection.user2Nickname,
+    emotionTags: connection.emotionTags,
+    messages: messages.map((m) => ({
+      senderId: m.senderId,
+      content: m.content,
+      createdAt: m.createdAt,
+    })),
+    savedAt: Timestamp.now(),
+    date: connection.date,
+  };
+
+  const docRef = await addDoc(collection(db, "conversations"), conversationData);
+  console.log("[Firestore] saveConversation 성공:", docRef.id);
+
+  // 연결 상태 ended로 변경
+  await updateDoc(doc(db, "connections", connectionId), {
+    status: "ended",
+  });
+
+  return docRef.id;
+}
+
+// 대화 삭제 (메시지 subcollection 삭제 + 상태 ended)
+export async function deleteConversationMessages(
+  connectionId: string
+): Promise<void> {
+  console.log("[Firestore] deleteConversationMessages 시작:", connectionId);
+
+  // 메시지 subcollection 조회
+  const messagesSnapshot = await getDocs(
+    collection(db, "connections", connectionId, "messages")
+  );
+
+  // 각 메시지 삭제 (Firestore는 batch delete 필요)
+  const { writeBatch } = await import("firebase/firestore");
+  const batch = writeBatch(db);
+
+  messagesSnapshot.docs.forEach((msgDoc) => {
+    batch.delete(doc(db, "connections", connectionId, "messages", msgDoc.id));
+  });
+
+  await batch.commit();
+  console.log("[Firestore] 메시지 삭제 완료:", messagesSnapshot.size, "개");
+
+  // 연결 상태 ended로 변경
+  await updateDoc(doc(db, "connections", connectionId), {
+    status: "ended",
+  });
+
+  console.log("[Firestore] deleteConversationMessages 완료");
+}
+
+// 보관된 대화 목록 조회
+export async function getSavedConversations(
+  userId: string
+): Promise<SavedConversation[]> {
+  console.log("[Firestore] getSavedConversations 시작:", userId);
+
+  // user1 또는 user2로 참여한 대화 조회
+  const q1 = query(
+    collection(db, "conversations"),
+    where("user1Id", "==", userId),
+    orderBy("savedAt", "desc")
+  );
+  const q2 = query(
+    collection(db, "conversations"),
+    where("user2Id", "==", userId),
+    orderBy("savedAt", "desc")
+  );
+
+  try {
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+
+    const conversations = [
+      ...snap1.docs.map((d) => ({ id: d.id, ...d.data() } as SavedConversation)),
+      ...snap2.docs.map((d) => ({ id: d.id, ...d.data() } as SavedConversation)),
+    ];
+
+    // 중복 제거 및 정렬
+    const unique = Array.from(
+      new Map(conversations.map((c) => [c.id, c])).values()
+    );
+    unique.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+
+    console.log("[Firestore] getSavedConversations 성공:", unique.length, "개");
+    return unique;
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    if (err.code === "failed-precondition" || err.message?.includes("index")) {
+      console.log("[Firestore] 인덱스 없음 - 전체 조회 후 필터링");
+      const snapshot = await getDocs(collection(db, "conversations"));
+      const conversations = snapshot.docs
+        .map((d) => ({ id: d.id, ...d.data() } as SavedConversation))
+        .filter((c) => c.user1Id === userId || c.user2Id === userId);
+      conversations.sort((a, b) => b.savedAt.toMillis() - a.savedAt.toMillis());
+      return conversations;
+    }
+    throw error;
+  }
+}
+
+// 연결 상태 실시간 구독 (보관 요청 감지용)
+export function subscribeToConnection(
+  connectionId: string,
+  callback: (connection: Connection | null) => void
+): () => void {
+  return onSnapshot(doc(db, "connections", connectionId), (snapshot) => {
+    if (snapshot.exists()) {
+      callback({ id: snapshot.id, ...snapshot.data() } as Connection);
     } else {
       callback(null);
     }

@@ -10,31 +10,25 @@ import { analyzeFirstRecord, FirstRecordAnalysis } from "@/lib/ai";
 type Step = 1 | 2 | 3;
 type RecordMode = "voice" | "text" | null;
 
-// 픽셀 달 (page.tsx에서 재활용)
+// 픽셀 초승달 (page.tsx에서 재활용)
 const PixelMoon = () => (
   <div className="float">
     <svg width="120" height="120" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-      <rect x="10" y="4" width="12" height="2" fill="var(--yellow)" />
-      <rect x="8" y="6" width="2" height="2" fill="var(--yellow)" />
-      <rect x="22" y="6" width="2" height="2" fill="var(--yellow)" />
-      <rect x="6" y="8" width="2" height="2" fill="var(--yellow)" />
-      <rect x="24" y="8" width="2" height="2" fill="var(--yellow)" />
-      <rect x="4" y="10" width="2" height="12" fill="var(--yellow)" />
-      <rect x="26" y="10" width="2" height="12" fill="var(--yellow)" />
-      <rect x="6" y="22" width="2" height="2" fill="var(--yellow)" />
-      <rect x="24" y="22" width="2" height="2" fill="var(--yellow)" />
-      <rect x="8" y="24" width="2" height="2" fill="var(--yellow)" />
-      <rect x="22" y="24" width="2" height="2" fill="var(--yellow)" />
-      <rect x="10" y="26" width="12" height="2" fill="var(--yellow)" />
-      <rect x="10" y="6" width="12" height="2" fill="#FFF8DC" />
-      <rect x="8" y="8" width="16" height="2" fill="#FFF8DC" />
-      <rect x="6" y="10" width="20" height="12" fill="#FFF8DC" />
-      <rect x="8" y="22" width="16" height="2" fill="#FFF8DC" />
-      <rect x="10" y="24" width="12" height="2" fill="#FFF8DC" />
-      <rect x="10" y="12" width="2" height="2" fill="var(--accent)" opacity="0.4" />
-      <rect x="18" y="10" width="4" height="2" fill="var(--accent)" opacity="0.3" />
-      <rect x="12" y="18" width="3" height="2" fill="var(--accent)" opacity="0.35" />
-      <rect x="20" y="16" width="2" height="2" fill="var(--accent)" opacity="0.3" />
+      {/* 초승달 - 왼쪽 볼록, 오른쪽 파임, 채워진 형태 */}
+      <rect x="18" y="2" width="2" height="2" fill="var(--yellow)" />
+      <rect x="16" y="4" width="4" height="2" fill="var(--yellow)" />
+      <rect x="14" y="6" width="6" height="2" fill="var(--yellow)" />
+      <rect x="12" y="8" width="8" height="2" fill="var(--yellow)" />
+      <rect x="10" y="10" width="10" height="2" fill="var(--yellow)" />
+      <rect x="8" y="12" width="10" height="2" fill="var(--yellow)" />
+      <rect x="8" y="14" width="8" height="2" fill="var(--yellow)" />
+      <rect x="8" y="16" width="8" height="2" fill="var(--yellow)" />
+      <rect x="8" y="18" width="10" height="2" fill="var(--yellow)" />
+      <rect x="10" y="20" width="10" height="2" fill="var(--yellow)" />
+      <rect x="12" y="22" width="8" height="2" fill="var(--yellow)" />
+      <rect x="14" y="24" width="6" height="2" fill="var(--yellow)" />
+      <rect x="16" y="26" width="4" height="2" fill="var(--yellow)" />
+      <rect x="18" y="28" width="2" height="2" fill="var(--yellow)" />
     </svg>
   </div>
 );
@@ -243,7 +237,6 @@ export default function OnboardingPage() {
               placeholder="닉네임 입력"
               maxLength={10}
               className="w-full bg-[var(--bg2)] border-2 border-[var(--bg3)] px-4 py-4 text-[var(--text)] text-center text-lg placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
-              style={{ fontFamily: "'DotGothic16', monospace" }}
             />
             <p className="text-[var(--muted)] text-xs mt-3">
               닉네임은 나중에 바꿀 수 있어요
@@ -346,7 +339,6 @@ export default function OnboardingPage() {
                 onChange={(e) => setText(e.target.value)}
                 placeholder="오늘 어떤 하루였나요?"
                 className="w-full h-40 p-4 bg-[var(--bg2)] border-2 border-[var(--bg3)] text-[var(--text)] placeholder-[var(--muted)] resize-none focus:outline-none focus:border-[var(--accent)] transition-colors"
-                style={{ fontFamily: "'DotGothic16', monospace" }}
               />
               <p className="text-[var(--muted)] text-xs text-right mt-1">
                 {text.length}자

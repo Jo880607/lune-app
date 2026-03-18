@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap');
+/* Galmuri11 폰트는 layout.tsx에서 CDN으로 로드 */
 
 @tailwind base;
 @tailwind components;
@@ -15,15 +15,34 @@
   --muted: #6B6B8A;
 }
 
+@layer base {
+  * {
+    font-family: 'Galmuri11', monospace !important;
+  }
+
+  html, body {
+    font-family: 'Galmuri11', monospace !important;
+  }
+
+  input, textarea, button, select {
+    font-family: inherit !important;
+  }
+}
+
+/* Press Start 2P는 타이틀 전용 */
+.pixel-title {
+  font-family: 'Press Start 2P', monospace !important;
+}
+
 body {
   color: var(--text);
   background: var(--bg);
-  font-family: 'DotGothic16', monospace;
+  font-family: 'Galmuri11', monospace;
 }
 
 /* 픽셀 버튼 */
 .pixel-btn {
-  font-family: 'DotGothic16', monospace;
+  font-family: 'Galmuri11', monospace;
   background: var(--accent);
   color: var(--bg);
   border: none;
@@ -44,7 +63,7 @@ body {
 }
 
 .pixel-btn-secondary {
-  font-family: 'DotGothic16', monospace;
+  font-family: 'Galmuri11', monospace;
   background: transparent;
   color: var(--muted);
   border: 2px solid var(--bg3);
@@ -86,14 +105,9 @@ body {
   animation: float 4s ease-in-out infinite;
 }
 
-/* 픽셀 타이틀 폰트 */
-.pixel-title {
-  font-family: 'Press Start 2P', monospace;
-}
-
 /* 픽셀 태그 */
 .pixel-tag {
-  font-family: 'DotGothic16', monospace;
+  font-family: 'Galmuri11', monospace;
   display: inline-block;
   padding: 6px 12px;
   background: var(--bg3);

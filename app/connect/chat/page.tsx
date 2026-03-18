@@ -161,7 +161,6 @@ export default function ChatPage() {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="메시지를 입력하세요..."
             className="flex-1 bg-[var(--bg)] border border-[var(--bg3)] px-4 py-3 text-[var(--text)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--accent)]"
-            style={{ fontFamily: "'DotGothic16', monospace" }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -177,7 +176,6 @@ export default function ChatPage() {
             }`}
             style={{
               boxShadow: message.trim() ? "3px 3px 0 var(--accent2)" : "none",
-              fontFamily: "'DotGothic16', monospace",
             }}
           >
             전송

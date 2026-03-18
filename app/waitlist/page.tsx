@@ -277,7 +277,7 @@ export default function WaitlistPage() {
         <div className="text-center mb-8">
           <p className="text-[var(--yellow)] text-lg">
             현재{" "}
-            <span className="pixel-title text-xs">{stats.userCount}</span>
+            <span className="font-normal">{stats.userCount}</span>
             /1,000명 입장 중
           </p>
           <p className="text-[var(--muted)] text-sm mt-2">

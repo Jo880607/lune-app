@@ -45,33 +45,24 @@ export default function Home() {
 
       {/* 메인 컨텐츠 */}
       <main className="flex flex-col items-center gap-8 z-10">
-        {/* 픽셀 달 */}
+        {/* 픽셀 초승달 */}
         <div className="float mb-4">
           <svg width="120" height="120" viewBox="0 0 32 32" style={{ imageRendering: 'pixelated' }}>
-            {/* 달 외곽 */}
-            <rect x="10" y="4" width="12" height="2" fill="var(--yellow)" />
-            <rect x="8" y="6" width="2" height="2" fill="var(--yellow)" />
-            <rect x="22" y="6" width="2" height="2" fill="var(--yellow)" />
-            <rect x="6" y="8" width="2" height="2" fill="var(--yellow)" />
-            <rect x="24" y="8" width="2" height="2" fill="var(--yellow)" />
-            <rect x="4" y="10" width="2" height="12" fill="var(--yellow)" />
-            <rect x="26" y="10" width="2" height="12" fill="var(--yellow)" />
-            <rect x="6" y="22" width="2" height="2" fill="var(--yellow)" />
-            <rect x="24" y="22" width="2" height="2" fill="var(--yellow)" />
-            <rect x="8" y="24" width="2" height="2" fill="var(--yellow)" />
-            <rect x="22" y="24" width="2" height="2" fill="var(--yellow)" />
-            <rect x="10" y="26" width="12" height="2" fill="var(--yellow)" />
-            {/* 달 내부 */}
-            <rect x="10" y="6" width="12" height="2" fill="#FFF8DC" />
-            <rect x="8" y="8" width="16" height="2" fill="#FFF8DC" />
-            <rect x="6" y="10" width="20" height="12" fill="#FFF8DC" />
-            <rect x="8" y="22" width="16" height="2" fill="#FFF8DC" />
-            <rect x="10" y="24" width="12" height="2" fill="#FFF8DC" />
-            {/* 달 크레이터 */}
-            <rect x="10" y="12" width="2" height="2" fill="var(--accent)" opacity="0.4" />
-            <rect x="18" y="10" width="4" height="2" fill="var(--accent)" opacity="0.3" />
-            <rect x="12" y="18" width="3" height="2" fill="var(--accent)" opacity="0.35" />
-            <rect x="20" y="16" width="2" height="2" fill="var(--accent)" opacity="0.3" />
+            {/* 초승달 - 왼쪽 볼록, 오른쪽 파임, 채워진 형태 */}
+            <rect x="18" y="2" width="2" height="2" fill="var(--yellow)" />
+            <rect x="16" y="4" width="4" height="2" fill="var(--yellow)" />
+            <rect x="14" y="6" width="6" height="2" fill="var(--yellow)" />
+            <rect x="12" y="8" width="8" height="2" fill="var(--yellow)" />
+            <rect x="10" y="10" width="10" height="2" fill="var(--yellow)" />
+            <rect x="8" y="12" width="10" height="2" fill="var(--yellow)" />
+            <rect x="8" y="14" width="8" height="2" fill="var(--yellow)" />
+            <rect x="8" y="16" width="8" height="2" fill="var(--yellow)" />
+            <rect x="8" y="18" width="10" height="2" fill="var(--yellow)" />
+            <rect x="10" y="20" width="10" height="2" fill="var(--yellow)" />
+            <rect x="12" y="22" width="8" height="2" fill="var(--yellow)" />
+            <rect x="14" y="24" width="6" height="2" fill="var(--yellow)" />
+            <rect x="16" y="26" width="4" height="2" fill="var(--yellow)" />
+            <rect x="18" y="28" width="2" height="2" fill="var(--yellow)" />
           </svg>
         </div>
 

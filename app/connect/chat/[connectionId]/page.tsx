@@ -14,6 +14,11 @@ import {
 import {
   getConnection,
   sendMessage,
+  requestKeep,
+  getKeepStatus,
+  saveConversation,
+  deleteConversationMessages,
+  subscribeToConnection,
 } from "@/lib/firestore";
 import { Connection, Message } from "@/types";
 
@@ -89,6 +94,15 @@ export default function ChatPage() {
   const [cooldownText, setCooldownText] = useState<string | null>(null);
   const [lastSentAt, setLastSentAt] = useState<Date | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 보관 관련 상태
+  const [showKeepModal, setShowKeepModal] = useState(false);
+  const [keepLoading, setKeepLoading] = useState(false);
+  const [myKeepResponse, setMyKeepResponse] = useState<boolean | null>(null);
+  const [partnerKeepResponse, setPartnerKeepResponse] = useState<boolean | null>(null);
+  const [keepResult, setKeepResult] = useState<"saved" | "deleted" | null>(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [isConversationComplete, setIsConversationComplete] = useState(false);
 
   // Auth
   useEffect(() => {
@@ -213,6 +227,69 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // 대화 완료 감지 (양쪽 각 2회 메시지 = 총 4개 메시지)
+  useEffect(() => {
+    if (!user || !connection || connection.isAI) return;
+
+    const myMsgs = messages.filter((m) => m.senderId === user.uid);
+    const partnerMsgs = messages.filter((m) => m.senderId !== user.uid && m.senderId !== "ai");
+
+    // 양쪽 모두 2회 메시지를 보냈을 때 대화 완료
+    if (myMsgs.length >= 2 && partnerMsgs.length >= 2 && !isConversationComplete) {
+      setIsConversationComplete(true);
+      // 보관 모달은 내가 아직 응답하지 않았을 때만 표시
+      if (myKeepResponse === null) {
+        setShowKeepModal(true);
+      }
+    }
+  }, [messages, user, connection, isConversationComplete, myKeepResponse]);
+
+  // 연결 상태 실시간 구독 (상대방 보관 응답 감지)
+  useEffect(() => {
+    if (!connectionId || !user) return;
+
+    const unsub = subscribeToConnection(connectionId, async (conn) => {
+      if (!conn) return;
+
+      setConnection(conn);
+
+      const keepRequest = conn.keepRequest;
+      if (!keepRequest) return;
+
+      const isUser1 = conn.user1Id === user.uid;
+      const myResponse = isUser1 ? keepRequest.user1 : keepRequest.user2;
+      const partnerResponse = isUser1 ? keepRequest.user2 : keepRequest.user1;
+
+      setMyKeepResponse(myResponse);
+      setPartnerKeepResponse(partnerResponse);
+
+      // 양쪽 모두 응답했을 때 결과 처리
+      if (myResponse !== null && partnerResponse !== null && !keepResult) {
+        if (myResponse === true && partnerResponse === true) {
+          // 둘 다 보관 원함 → 저장
+          try {
+            await saveConversation(connectionId);
+            setKeepResult("saved");
+          } catch (error) {
+            console.error("[Chat] 대화 보관 실패:", error);
+          }
+        } else {
+          // 한 명이라도 거부 → 삭제
+          try {
+            await deleteConversationMessages(connectionId);
+            setKeepResult("deleted");
+          } catch (error) {
+            console.error("[Chat] 대화 삭제 실패:", error);
+          }
+        }
+        setShowKeepModal(false);
+        setShowResultModal(true);
+      }
+    });
+
+    return () => unsub();
+  }, [connectionId, user, keepResult]);
+
   const handleSend = async () => {
     if (!user || !message.trim() || !canSend || sending) return;
 
@@ -253,6 +330,27 @@ export default function ChatPage() {
       console.error("[Chat] 전송 에러:", error);
     } finally {
       setSending(false);
+    }
+  };
+
+  // 보관 응답 핸들러
+  const handleKeepResponse = async (wantsToKeep: boolean) => {
+    if (!user || !connectionId || keepLoading) return;
+
+    setKeepLoading(true);
+    try {
+      await requestKeep(connectionId, user.uid, wantsToKeep);
+      setMyKeepResponse(wantsToKeep);
+
+      // 상대방이 이미 응답했는지 확인
+      const status = await getKeepStatus(connectionId);
+      if (status.bothResponded) {
+        // 결과는 subscribeToConnection에서 처리됨
+      }
+    } catch (error) {
+      console.error("[Chat] 보관 요청 실패:", error);
+    } finally {
+      setKeepLoading(false);
     }
   };
 
@@ -311,6 +409,15 @@ export default function ChatPage() {
             ? "AI와의 대화예요"
             : "대화 후 기록은 사라져요. 내 말만 보관함에 남아요."}
         </p>
+
+        {/* 보관 안내 배너 (사람 연결만) */}
+        {!connection.isAI && (
+          <div className="mt-2 bg-[var(--bg3)] border border-[var(--accent)] border-opacity-30 px-3 py-2">
+            <p className="text-[var(--accent)] text-[10px] text-center">
+              상대방이 이 대화를 보관하길 원할 수 있어요
+            </p>
+          </div>
+        )}
       </header>
 
       {/* 대화 내용 */}
@@ -389,7 +496,6 @@ export default function ChatPage() {
               }
               disabled={!canSend || sending}
               className="flex-1 bg-[var(--bg)] border border-[var(--bg3)] px-4 py-3 text-[var(--text)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--accent)] disabled:opacity-50"
-              style={{ fontFamily: "'DotGothic16', monospace" }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -410,7 +516,6 @@ export default function ChatPage() {
                   message.trim() && canSend
                     ? "3px 3px 0 var(--accent2)"
                     : "none",
-                fontFamily: "'DotGothic16', monospace",
               }}
             >
               {sending ? "..." : "전송"}
@@ -418,6 +523,136 @@ export default function ChatPage() {
           </div>
         )}
       </footer>
+
+      {/* 보관 모달 */}
+      {showKeepModal && !connection.isAI && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-[var(--bg2)] border-4 border-[var(--accent)] max-w-sm w-full p-6"
+            style={{ boxShadow: "8px 8px 0 rgba(200, 168, 233, 0.3)" }}
+          >
+            {/* 픽셀 아이콘 */}
+            <div className="flex justify-center mb-4">
+              <svg width="48" height="48" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+                <rect x="3" y="2" width="10" height="12" fill="var(--bg3)" />
+                <rect x="4" y="3" width="8" height="10" fill="var(--bg)" />
+                <rect x="5" y="5" width="6" height="1" fill="var(--accent)" />
+                <rect x="5" y="7" width="6" height="1" fill="var(--accent)" />
+                <rect x="5" y="9" width="4" height="1" fill="var(--accent)" />
+                <rect x="7" y="1" width="2" height="2" fill="var(--yellow)" />
+              </svg>
+            </div>
+
+            <h3 className="text-[var(--text)] text-center text-lg mb-2">
+              이 대화를 보관할까요?
+            </h3>
+
+            <p className="text-[var(--muted)] text-xs text-center mb-6">
+              {myKeepResponse !== null
+                ? partnerKeepResponse === null
+                  ? "상대방의 응답을 기다리는 중..."
+                  : "처리 중..."
+                : "둘 다 보관을 선택하면\n나 탭 보관함에서 볼 수 있어요"}
+            </p>
+
+            {myKeepResponse === null ? (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleKeepResponse(false)}
+                  disabled={keepLoading}
+                  className="flex-1 py-3 bg-[var(--bg3)] text-[var(--muted)] border-2 border-[var(--muted)] hover:border-[var(--text)] hover:text-[var(--text)] transition-colors disabled:opacity-50"
+                >
+                  괜찮아요
+                </button>
+                <button
+                  onClick={() => handleKeepResponse(true)}
+                  disabled={keepLoading}
+                  className="flex-1 py-3 bg-[var(--accent)] text-[var(--bg)] hover:bg-[var(--accent2)] transition-colors disabled:opacity-50"
+                  style={{ boxShadow: "4px 4px 0 var(--accent2)" }}
+                >
+                  {keepLoading ? "..." : "보관하기"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <div className="flex items-center gap-2 text-[var(--accent)]">
+                  <svg width="16" height="16" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+                    <rect x="7" y="4" width="2" height="2" fill="currentColor" />
+                    <rect x="7" y="7" width="2" height="2" fill="currentColor" />
+                    <rect x="7" y="10" width="2" height="2" fill="currentColor" />
+                  </svg>
+                  <span>기다리는 중</span>
+                  <svg width="16" height="16" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+                    <rect x="7" y="4" width="2" height="2" fill="currentColor" />
+                    <rect x="7" y="7" width="2" height="2" fill="currentColor" />
+                    <rect x="7" y="10" width="2" height="2" fill="currentColor" />
+                  </svg>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 결과 모달 */}
+      {showResultModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-[var(--bg2)] border-4 border-[var(--accent)] max-w-sm w-full p-6"
+            style={{ boxShadow: "8px 8px 0 rgba(200, 168, 233, 0.3)" }}
+          >
+            {keepResult === "saved" ? (
+              <>
+                {/* 저장 성공 아이콘 */}
+                <div className="flex justify-center mb-4">
+                  <svg width="48" height="48" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+                    <rect x="3" y="6" width="2" height="2" fill="var(--yellow)" />
+                    <rect x="5" y="8" width="2" height="2" fill="var(--yellow)" />
+                    <rect x="7" y="6" width="2" height="2" fill="var(--yellow)" />
+                    <rect x="9" y="4" width="2" height="2" fill="var(--yellow)" />
+                    <rect x="11" y="2" width="2" height="2" fill="var(--yellow)" />
+                  </svg>
+                </div>
+                <h3 className="text-[var(--yellow)] text-center text-lg mb-2">
+                  대화가 보관되었어요
+                </h3>
+                <p className="text-[var(--muted)] text-xs text-center mb-6">
+                  나 탭 보관함에서 다시 볼 수 있어요
+                </p>
+              </>
+            ) : (
+              <>
+                {/* 삭제 아이콘 */}
+                <div className="flex justify-center mb-4">
+                  <svg width="48" height="48" viewBox="0 0 16 16" style={{ imageRendering: "pixelated" }}>
+                    <rect x="7" y="3" width="2" height="2" fill="var(--muted)" />
+                    <rect x="6" y="5" width="4" height="1" fill="var(--muted)" />
+                    <rect x="5" y="6" width="6" height="1" fill="var(--muted)" />
+                    <rect x="4" y="7" width="8" height="1" fill="var(--muted)" />
+                    <rect x="5" y="8" width="6" height="1" fill="var(--muted)" />
+                    <rect x="6" y="9" width="4" height="1" fill="var(--muted)" />
+                    <rect x="7" y="10" width="2" height="1" fill="var(--muted)" />
+                  </svg>
+                </div>
+                <h3 className="text-[var(--text)] text-center text-lg mb-2">
+                  대화가 사라졌어요
+                </h3>
+                <p className="text-[var(--muted)] text-xs text-center mb-6">
+                  오늘의 연결이었어요
+                </p>
+              </>
+            )}
+
+            <button
+              onClick={() => router.replace("/connect")}
+              className="w-full py-3 bg-[var(--accent)] text-[var(--bg)] hover:bg-[var(--accent2)] transition-colors"
+              style={{ boxShadow: "4px 4px 0 var(--accent2)" }}
+            >
+              돌아가기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

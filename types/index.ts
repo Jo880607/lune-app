@@ -43,6 +43,28 @@ export interface Connection {
   user2Nickname: string;
   date: string; // "2026-03-17" 형식
   createdAt: Timestamp;
+  keepRequest?: {
+    user1: boolean | null; // null = 아직 응답 안함, true = 보관, false = 거부
+    user2: boolean | null;
+    requestedAt?: Timestamp;
+  };
+}
+
+export interface SavedConversation {
+  id?: string;
+  connectionId: string;
+  user1Id: string;
+  user2Id: string;
+  user1Nickname: string;
+  user2Nickname: string;
+  emotionTags: string[];
+  messages: {
+    senderId: string;
+    content: string;
+    createdAt: Timestamp;
+  }[];
+  savedAt: Timestamp;
+  date: string;
 }
 
 export interface Message {

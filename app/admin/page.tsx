@@ -112,10 +112,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[var(--bg)]">
       {/* 헤더 */}
       <header className="p-6 text-center border-b border-[var(--bg3)]">
-        <h1
-          className="text-2xl text-[var(--yellow)]"
-          style={{ fontFamily: "'Press Start 2P', monospace" }}
-        >
+        <h1 className="pixel-title text-2xl text-[var(--yellow)]">
           ADMIN
         </h1>
         <p className="text-[var(--muted)] text-xs mt-2">Lune Dashboard</p>
@@ -132,19 +129,13 @@ export default function AdminPage() {
             >
               {/* 픽셀 아이콘 라벨 */}
               <div className="flex items-center gap-2 mb-3">
-                <span
-                  className="text-[10px] text-[var(--bg)] bg-[var(--accent)] px-1.5 py-0.5 rounded-sm"
-                  style={{ fontFamily: "'Press Start 2P', monospace" }}
-                >
+                <span className="pixel-title text-[10px] text-[var(--bg)] bg-[var(--accent)] px-1.5 py-0.5 rounded-sm">
                   {card.icon}
                 </span>
               </div>
 
               {/* 숫자 */}
-              <p
-                className="text-3xl text-[var(--text)] mb-1"
-                style={{ fontFamily: "'Press Start 2P', monospace" }}
-              >
+              <p className="pixel-title text-3xl text-[var(--text)] mb-1">
                 {card.value.toLocaleString()}
               </p>
 

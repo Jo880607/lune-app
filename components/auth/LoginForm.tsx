@@ -191,7 +191,6 @@ export default function LoginForm() {
               maxLength={13}
               className="w-full border-2 px-4 py-4 text-center text-lg focus:outline-none transition-colors"
               style={{
-                fontFamily: "'DotGothic16', monospace",
                 backgroundColor: '#1A1A2E',
                 borderColor: '#16213E',
                 color: '#E8E8F0',
@@ -232,7 +231,6 @@ export default function LoginForm() {
               maxLength={6}
               className="w-full border-2 px-4 py-4 text-center text-2xl tracking-[0.5em] focus:outline-none transition-colors"
               style={{
-                fontFamily: "'DotGothic16', monospace",
                 backgroundColor: '#1A1A2E',
                 borderColor: '#16213E',
                 color: '#E8E8F0',
