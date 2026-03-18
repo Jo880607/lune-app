@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 48 48">
-  <rect width="48" height="48" fill="#0D0D1A"/>
-  <g transform="translate(8, 8)">
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" fill="#0D0D1A"/>
+  <g transform="translate(2, 2) scale(0.875)">
     <!-- 달 외곽 -->
     <rect x="10" y="4" width="12" height="2" fill="#FFE566"/>
     <rect x="8" y="6" width="2" height="2" fill="#FFE566"/>
